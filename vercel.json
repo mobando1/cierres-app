@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/ia-queue",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/drive-folders",
+      "schedule": "50 4 * * *"
+    }
+  ]
+}
