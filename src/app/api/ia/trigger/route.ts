@@ -4,12 +4,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/auth/requireAuth';
 import { analyzeCierre } from '@/lib/ia/analyzer';
 import { nowTimestamp } from '@/lib/parser/dates';
 
 export const maxDuration = 300; // 300s (Vercel Pro)
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+
   const body = await request.json();
   const { cierre_id } = body;
 

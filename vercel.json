@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/drive-folders",
       "schedule": "50 4 * * *"
+    },
+    {
+      "path": "/api/cron/daily-summary",
+      "schedule": "0 3 * * *"
     }
   ]
 }

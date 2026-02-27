@@ -105,3 +105,79 @@ export async function sendAlertEmail(
     console.error('Error enviando email:', e);
   }
 }
+
+export interface DailySummaryData {
+  fecha: string;
+  totalCierres: number;
+  faltanteTotal: number;
+  descuadres: Array<{ punto: string; responsable: string; monto: number; tipo: string }>;
+  alertasPendientes: number;
+  sobresPendientes: number;
+}
+
+export async function sendDailySummary(data: DailySummaryData): Promise<void> {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) return;
+
+  const fmt = (n: number) => formatMoney(n);
+  const appUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+
+  const subject = `Resumen del dia ${data.fecha} — ${data.totalCierres} cierres`;
+
+  let html = '<div style="font-family: Arial, sans-serif; max-width: 600px;">';
+
+  // Banner
+  html += '<div style="background: #2563eb; color: white; padding: 12px 16px; border-radius: 8px 8px 0 0; font-size: 18px; font-weight: bold;">';
+  html += `Resumen ${data.fecha}</div>`;
+
+  // Números del día
+  html += '<div style="background: #F8F9FA; padding: 12px 16px; border: 1px solid #DEE2E6;">';
+  html += `<strong>Cierres procesados:</strong> ${data.totalCierres}<br>`;
+  if (data.faltanteTotal > 0) {
+    html += `<strong style="color: #D32F2F;">Faltante total: $${fmt(data.faltanteTotal)}</strong><br>`;
+  } else {
+    html += '<strong style="color: #2E7D32;">Sin faltantes</strong><br>';
+  }
+  html += `Alertas pendientes: ${data.alertasPendientes} | Sobres pendientes: ${data.sobresPendientes}</div>`;
+
+  // Descuadres importantes
+  if (data.descuadres.length > 0) {
+    html += '<div style="background: #FFF3E0; padding: 12px 16px; border: 1px solid #FFB74D;">';
+    html += `<strong>Descuadres > $5,000 (${data.descuadres.length}):</strong><br>`;
+    for (const d of data.descuadres) {
+      const color = d.tipo === 'FALTANTE' ? '#D32F2F' : '#F57C00';
+      html += `• <strong>${d.punto}</strong> — ${d.responsable}: `;
+      html += `<span style="color: ${color}">${d.tipo} $${fmt(Math.abs(d.monto))}</span><br>`;
+    }
+    html += '</div>';
+  }
+
+  // Link a la app
+  html += `<div style="padding: 12px 16px; text-align: center;">`;
+  html += `<a href="${appUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Abrir Cierres App</a></div>`;
+
+  html += '</div>';
+
+  // Texto plano
+  let text = `Resumen ${data.fecha}\n`;
+  text += `Cierres: ${data.totalCierres} | Faltante: $${fmt(data.faltanteTotal)}\n`;
+  if (data.descuadres.length > 0) {
+    text += `Descuadres:\n`;
+    for (const d of data.descuadres) {
+      text += `  ${d.punto} — ${d.responsable}: ${d.tipo} $${fmt(Math.abs(d.monto))}\n`;
+    }
+  }
+
+  try {
+    const resend = getResend();
+    await resend.emails.send({
+      from: 'Cierres de Caja <noreply@' + (process.env.RESEND_DOMAIN || 'resend.dev') + '>',
+      to: adminEmail,
+      subject,
+      text,
+      html,
+    });
+  } catch (e) {
+    console.error('Error enviando resumen diario:', e);
+  }
+}

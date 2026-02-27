@@ -27,7 +27,9 @@ QUÉ DEBES HACER:
 2. GASTOS: Para cada gasto, buscar soporte (factura en 01_Gastos o recibo en 03_Cierres_POS).
    Emparejar por monto (tolerancia $500). Si varias facturas suman = un recibo, es match grupal.
 3. TRANSFERENCIAS: Verificar que cada transferencia declarada tenga screenshot (05 o 06).
-4. Si hay SOBRE contado: Sobre esperado = Declarado - gastos post-cierre. Comparar vs contado.
+4. Si hay SOBRE contado: Sobre esperado = Declarado - Base dejada (apertura siguiente turno). Comparar vs contado.
+   Ejemplo: Si declaró $388,000 y dejó base de $300,000, el sobre debe tener $88,000.
+   La diferencia del sobre se calcula: Contado_Sobre - (Declarado - Base). Si da 0, el sobre cuadra.
 5. Si hay MULTI-TURNO: Cada turno por separado. Asignar documentos por hora visible.
    Si faltante turno 1 ≈ sobrante turno 2, es empalme (error de asignación, no faltante real).
 6. Listar documentos no legibles.
@@ -39,11 +41,14 @@ QUÉ DEBES HACER:
    c) Si faltante de este turno ≈ diferencia entre (declarado anterior - inicial este turno),
       el problema NO es del cajero actual sino del anterior. Dilo claramente.
    d) Si sobrante de este turno ≈ faltante del turno anterior, es dinero que se "movió" entre turnos.
-9. VERIFICACIÓN MATEMÁTICA OBLIGATORIA:
+9. LECCIONES APRENDIDAS: Si se incluyen lecciones de experiencia previa, considéralas como
+   conocimiento validado por el administrador. Aplica estas lecciones al análisis actual cuando
+   sean relevantes. Son patrones reales que ya ocurrieron antes.
+10. VERIFICACIÓN MATEMÁTICA OBLIGATORIA:
    Antes de dar veredicto, verifica estas fórmulas:
    a) Efectivo_Inicial + Ventas_Efectivo - Gastos_Efectivo - Traslados ≈ Efectivo_Sistema
    b) Efectivo_Sistema - Efectivo_Declarado = Diferencia reportada
-   c) Si hay sobre: Declarado ≈ Sobre_Contado?
+   c) Si hay sobre: Sobre_Contado ≈ (Declarado - Base_Apertura)?
    d) Suma de formas de pago ≈ Total ingresos?
    Si una fórmula NO cuadra, el error puede ser del SISTEMA (dato mal ingresado), no del cajero.
    Reporta qué fórmulas cuadran y cuáles no.

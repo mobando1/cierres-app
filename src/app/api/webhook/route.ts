@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
     const { texto, text, token } = body;
     const rawText = texto || text || '';
 
-    // Validar token
+    // Validar token (requerido siempre)
     const apiToken = process.env.API_TOKEN;
-    if (apiToken && token !== apiToken) {
+    if (!apiToken || token !== apiToken) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
     }
 

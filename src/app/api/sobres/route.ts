@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/auth/requireAuth';
 import { CONFIG } from '@/lib/config';
 import { nowTimestamp } from '@/lib/parser/dates';
 
@@ -28,6 +29,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+
   const body = await request.json();
   const { cierre_id, efectivo_contado, notas } = body;
 
@@ -43,7 +47,7 @@ export async function POST(request: NextRequest) {
   // Leer cierre actual
   const { data: cierre, error: readError } = await supabase
     .from('cierres')
-    .select('efectivo_declarado, estado_auditoria_ia')
+    .select('efectivo_declarado, apertura_valor, estado_auditoria_ia')
     .eq('id', cierre_id)
     .single();
 
@@ -53,7 +57,9 @@ export async function POST(request: NextRequest) {
 
   const contado = Number(efectivo_contado);
   const declarado = cierre.efectivo_declarado || 0;
-  const diferencia = contado - declarado;
+  const base = cierre.apertura_valor || 0;
+  const sobreEsperado = declarado - base;
+  const diferencia = contado - sobreEsperado;
   const absDif = Math.abs(diferencia);
   const sobreEstado = absDif <= CONFIG.TOLERANCIA_COP ? 'CONFIRMADO' : 'DISCREPANCIA';
 

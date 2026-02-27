@@ -98,6 +98,15 @@ export async function analyzeCierre(
     .limit(1)
     .maybeSingle();
 
+  // Paso 2c: Buscar lecciones aprendidas activas
+  const { data: lecciones } = await supabase
+    .from('lecciones_ia')
+    .select('punto, responsable, tipo, leccion, alcance')
+    .eq('activa', true)
+    .or(`alcance.eq.GLOBAL,punto.eq.${punto}${cierre.responsable ? `,responsable.eq.${cierre.responsable}` : ''}`)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
   // Paso 3: Extraer datos de imágenes en lotes
   const imageFiles = collectImageFiles(archivos);
   let datosExtraidos: string[] = [];
@@ -107,7 +116,16 @@ export async function analyzeCierre(
   }
 
   // Paso 4: Construir contexto y hacer síntesis
-  const contexto = buildContextoCierre(cierre, evidenciaResumen, otrosCierres || [], turnoAnterior, turnoSiguiente);
+  let contexto = buildContextoCierre(cierre, evidenciaResumen, otrosCierres || [], turnoAnterior, turnoSiguiente);
+
+  // Agregar lecciones aprendidas al contexto
+  if (lecciones && lecciones.length > 0) {
+    contexto += '\n--- LECCIONES APRENDIDAS (experiencia previa del administrador) ---\n';
+    for (const l of lecciones) {
+      const scope = l.alcance === 'GLOBAL' ? 'GLOBAL' : l.alcance === 'NEGOCIO' ? `NEGOCIO: ${l.punto}` : `CAJERO: ${l.responsable}`;
+      contexto += `[${scope}] (${l.tipo}) ${l.leccion}\n`;
+    }
+  }
 
   const content: Anthropic.MessageParam['content'] = [];
   content.push({ type: 'text', text: contexto });
@@ -351,8 +369,12 @@ function buildContextoCierre(
 
   // Sobre
   if (cierre.efectivo_contado_sobre != null) {
+    const sobreEsperado = cierre.efectivo_declarado - (cierre.apertura_valor || 0);
     ctx += '\n--- CONFIRMACIÓN DE SOBRE ---\n';
-    ctx += `Contado: $${fmt(cierre.efectivo_contado_sobre)}\nDiferencia: $${fmt(cierre.sobre_diferencia || 0)}\n`;
+    ctx += `Base dejada (apertura siguiente): $${fmt(cierre.apertura_valor || 0)}\n`;
+    ctx += `Sobre esperado (Declarado - Base): $${fmt(sobreEsperado)}\n`;
+    ctx += `Sobre contado: $${fmt(cierre.efectivo_contado_sobre)}\n`;
+    ctx += `Diferencia (Contado - Esperado): $${fmt(cierre.efectivo_contado_sobre - sobreEsperado)}\n`;
     ctx += `Estado: ${cierre.sobre_estado}\n`;
     if (cierre.sobre_notas) ctx += `Notas: ${cierre.sobre_notas}\n`;
   }

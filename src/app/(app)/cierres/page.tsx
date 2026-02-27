@@ -87,6 +87,12 @@ function CierreCard({ cierre }: { cierre: Cierre }) {
         <div>
           <div className="font-semibold text-foreground">{cierre.punto}</div>
           <div className="text-sm text-muted">{cierre.fecha} &middot; {cierre.responsable}</div>
+          <div className="text-xs text-muted">
+            {cierre.id_cierre != null && <>#{cierre.id_cierre}</>}
+            {(cierre.hora_inicio || cierre.hora_fin) && (
+              <> &middot; {cierre.hora_inicio || '?'} - {cierre.hora_fin || '?'}</>
+            )}
+          </div>
         </div>
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${riesgoBadge}`}>
           {cierre.nivel_riesgo || 'N/A'}

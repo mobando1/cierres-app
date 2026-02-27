@@ -8,11 +8,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/auth/requireAuth';
 import { parseWhatsAppText } from '@/lib/parser';
 import { classifyCierre } from '@/lib/audit';
 import { nowTimestamp } from '@/lib/parser/dates';
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+
   try {
     const body = await request.json();
     const texto = body.texto || body.text || '';
