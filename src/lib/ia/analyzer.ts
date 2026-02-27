@@ -6,7 +6,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { CONFIG } from '../config';
 import { SYSTEM_PROMPT_AUDITOR, SYSTEM_PROMPT_EXTRACCION } from './prompts';
-import { listFiles, getFileBase64, buildEvidenciaResumen, type DriveFiles } from '../drive/client';
+import { listFiles, getFileBase64, buildEvidenciaResumen, parseServiceAccountKey, type DriveFiles } from '../drive/client';
 import { sendAlertEmail } from '../email/alerts';
 import { formatMoney } from '../parser/money';
 import { formatDateDisplay, parseDate, nowColombia, nowTimestamp } from '../parser/dates';
@@ -44,7 +44,7 @@ export async function analyzeCierre(
     const { google } = await import('googleapis');
     const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
     if (keyJson) {
-      const key = JSON.parse(Buffer.from(keyJson, 'base64').toString('utf-8'));
+      const key = parseServiceAccountKey(keyJson);
       const auth = new google.auth.GoogleAuth({
         credentials: key,
         scopes: ['https://www.googleapis.com/auth/drive'],
