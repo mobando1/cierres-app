@@ -76,6 +76,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
+  // Disparar análisis IA en background (fire-and-forget)
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000'
+    : 'http://localhost:3000';
+
+  fetch(`${baseUrl}/api/cron/ia-queue`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+  }).catch(() => {
+    // Fire-and-forget: si falla, el cron diario lo recoge
+  });
+
   return NextResponse.json({
     success: true,
     sobre_estado: sobreEstado,

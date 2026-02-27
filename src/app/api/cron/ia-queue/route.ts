@@ -9,7 +9,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { analyzeCierre } from '@/lib/ia/analyzer';
 import { nowTimestamp } from '@/lib/parser/dates';
 
-export const maxDuration = 300; // 5 min (Vercel Pro)
+export const maxDuration = 60; // 60s (Vercel Hobby limit)
 
 export async function GET(request: NextRequest) {
   // Validar cron secret

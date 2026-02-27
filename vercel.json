@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/ia-queue",
-      "schedule": "* * * * *"
+      "schedule": "0 5 * * *"
     },
     {
       "path": "/api/cron/drive-folders",
