@@ -42,7 +42,7 @@ export default function CierreDetallePage({ params }: { params: Promise<{ id: st
           setCierre(updated);
         }
       } else {
-        setIaError(data.error || 'Error en análisis');
+        setIaError(data.details ? `${data.error}: ${data.details}` : (data.error || 'Error en análisis'));
       }
     } catch {
       setIaError('Error de conexión');
