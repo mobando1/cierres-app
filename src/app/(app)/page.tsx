@@ -107,9 +107,21 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* Flujo del sistema */}
+      <div className="bg-card border border-card-border rounded-xl p-4">
+        <h2 className="font-semibold text-foreground mb-3">Como funciona</h2>
+        <div className="space-y-2">
+          <FlowStep num={1} text="Pega el cierre de WhatsApp arriba" active />
+          <FlowStep num={2} text="El sistema clasifica el riesgo automaticamente" />
+          <FlowStep num={3} text="Cuenta el sobre en la seccion Sobres" href="/sobres" />
+          <FlowStep num={4} text="La IA analiza con fotos de Drive (en detalle del cierre)" />
+          <FlowStep num={5} text="Revisa alertas y resultados" href="/alertas" />
+        </div>
+      </div>
+
       {/* Acciones rápidas */}
       <div className="space-y-2">
-        <h2 className="font-semibold text-foreground">Acciones rápidas</h2>
+        <h2 className="font-semibold text-foreground">Acciones rapidas</h2>
         <div className="grid grid-cols-2 gap-3">
           <QuickAction href="/cierres" label="Ver cierres" icon="📋" />
           <QuickAction href="/sobres" label="Contar sobres" icon="💼" />
@@ -153,4 +165,16 @@ function QuickAction({ href, label, icon }: { href: string; label: string; icon:
       <span className="text-sm font-medium">{label}</span>
     </Link>
   );
+}
+
+function FlowStep({ num, text, href, active }: { num: number; text: string; href?: string; active?: boolean }) {
+  const content = (
+    <div className={`flex items-start gap-3 ${active ? 'text-foreground' : 'text-muted'}`}>
+      <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${active ? 'bg-accent text-white' : 'bg-gray-200 text-gray-500'}`}>
+        {num}
+      </span>
+      <span className={`text-sm ${href ? 'text-accent underline' : ''}`}>{text}</span>
+    </div>
+  );
+  return href ? <Link href={href}>{content}</Link> : content;
 }

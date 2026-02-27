@@ -32,6 +32,21 @@ QUÉ DEBES HACER:
    Si faltante turno 1 ≈ sobrante turno 2, es empalme (error de asignación, no faltante real).
 6. Listar documentos no legibles.
 7. Considerar observaciones del admin como información confiable.
+8. CADENA DE EFECTIVO ENTRE TURNOS:
+   Si tienes datos del turno anterior o siguiente (sección BASES DE CAJA), VERIFICA:
+   a) Declarado turno anterior = Efectivo inicial de ESTE turno? Si no, hay error de empalme.
+   b) Sobre contado del turno anterior ≈ Apertura de este turno? Si no, hay faltante real del turno anterior.
+   c) Si faltante de este turno ≈ diferencia entre (declarado anterior - inicial este turno),
+      el problema NO es del cajero actual sino del anterior. Dilo claramente.
+   d) Si sobrante de este turno ≈ faltante del turno anterior, es dinero que se "movió" entre turnos.
+9. VERIFICACIÓN MATEMÁTICA OBLIGATORIA:
+   Antes de dar veredicto, verifica estas fórmulas:
+   a) Efectivo_Inicial + Ventas_Efectivo - Gastos_Efectivo - Traslados ≈ Efectivo_Sistema
+   b) Efectivo_Sistema - Efectivo_Declarado = Diferencia reportada
+   c) Si hay sobre: Declarado ≈ Sobre_Contado?
+   d) Suma de formas de pago ≈ Total ingresos?
+   Si una fórmula NO cuadra, el error puede ser del SISTEMA (dato mal ingresado), no del cajero.
+   Reporta qué fórmulas cuadran y cuáles no.
 
 RESPONDE OBLIGATORIAMENTE EN FORMATO JSON (sin texto antes ni después del JSON):
 {
@@ -47,6 +62,11 @@ RESPONDE OBLIGATORIAMENTE EN FORMATO JSON (sin texto antes ni después del JSON)
   "transferencias": [
     {"tipo": "Nequi", "monto": 57000, "screenshot": "nequi_57k.jpg", "verificado": true}
   ],
+  "verificacion_matematica": {
+    "formula_efectivo": "OK o ERROR: explicación",
+    "formula_declarado": "OK o ERROR: explicación",
+    "cadena_turnos": "OK o ERROR: explicación o N/A si no hay datos de otros turnos"
+  },
   "documentos_no_legibles": ["foto1.jpg"],
   "anomalias": ["Descripcion de anomalia encontrada"],
   "accion": "Qué debe hacer el admin (1-2 oraciones concretas)"

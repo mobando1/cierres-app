@@ -76,6 +76,28 @@ export async function analyzeCierre(
     .neq('id', cierre.id)
     .order('hora_inicio');
 
+  // Paso 2b: Buscar turno anterior y siguiente (bases de caja)
+  const idCierre = cierre.id_cierre || 0;
+  const { data: turnoAnterior } = await supabase
+    .from('cierres')
+    .select('fecha, responsable, hora_fin, efectivo_declarado, efectivo_contado_sobre, apertura_valor, sobrante_faltante_tipo, sobrante_faltante_monto')
+    .eq('punto', punto)
+    .or(`fecha.lt.${fecha},and(fecha.eq.${fecha},id_cierre.lt.${idCierre})`)
+    .order('fecha', { ascending: false })
+    .order('id_cierre', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { data: turnoSiguiente } = await supabase
+    .from('cierres')
+    .select('fecha, responsable, hora_inicio, efectivo_inicial, apertura_valor, sobrante_faltante_tipo, sobrante_faltante_monto')
+    .eq('punto', punto)
+    .or(`fecha.gt.${fecha},and(fecha.eq.${fecha},id_cierre.gt.${idCierre})`)
+    .order('fecha', { ascending: true })
+    .order('id_cierre', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
   // Paso 3: Extraer datos de imágenes en lotes
   const imageFiles = collectImageFiles(archivos);
   let datosExtraidos: string[] = [];
@@ -85,7 +107,7 @@ export async function analyzeCierre(
   }
 
   // Paso 4: Construir contexto y hacer síntesis
-  const contexto = buildContextoCierre(cierre, evidenciaResumen, otrosCierres || []);
+  const contexto = buildContextoCierre(cierre, evidenciaResumen, otrosCierres || [], turnoAnterior, turnoSiguiente);
 
   const content: Anthropic.MessageParam['content'] = [];
   content.push({ type: 'text', text: contexto });
@@ -293,10 +315,13 @@ async function saveExtractionCache(supabase: any, cierreId: string, processedFil
 // CONTEXT BUILDER
 // =====================================================================
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function buildContextoCierre(
   cierre: Cierre,
   evidencia: Record<string, { cantidad: number; archivos: string[] }>,
   otrosCierres: Cierre[],
+  turnoAnterior?: any,
+  turnoSiguiente?: any,
 ): string {
   const fmt = (n: number) => formatMoney(n);
   let ctx = '=== DATOS DEL CIERRE DE CAJA ===\n';
@@ -342,6 +367,34 @@ function buildContextoCierre(
     for (const otro of otrosCierres) {
       ctx += `>> ${otro.responsable} (ID ${otro.id_cierre}): ${otro.sobrante_faltante_tipo} $${fmt(Math.abs(otro.sobrante_faltante_monto))}\n`;
       ctx += `   Hora: ${otro.hora_inicio || '?'} - ${otro.hora_fin || '?'}\n`;
+    }
+  }
+
+  // Bases de caja (turnos anterior / siguiente)
+  if (turnoAnterior || turnoSiguiente) {
+    ctx += '\n--- BASES DE CAJA (TURNOS ANTERIOR / SIGUIENTE) ---\n';
+
+    if (turnoAnterior) {
+      ctx += `Turno ANTERIOR: ${turnoAnterior.responsable || '?'} cerró ${turnoAnterior.fecha} ${turnoAnterior.hora_fin || ''}\n`;
+      ctx += `  → Declaró: $${fmt(turnoAnterior.efectivo_declarado || 0)}`;
+      if (turnoAnterior.efectivo_contado_sobre != null) ctx += ` | Sobre contado: $${fmt(turnoAnterior.efectivo_contado_sobre)}`;
+      if (turnoAnterior.apertura_valor) ctx += ` | Apertura dejada: $${fmt(turnoAnterior.apertura_valor)}`;
+      ctx += `\n  → Resultado: ${turnoAnterior.sobrante_faltante_tipo} $${fmt(Math.abs(turnoAnterior.sobrante_faltante_monto || 0))}\n`;
+
+      // Verificación automática
+      const difBase = (turnoAnterior.efectivo_declarado || 0) - cierre.efectivo_inicial;
+      if (Math.abs(difBase) > 500) {
+        ctx += `  ⚠ ALERTA: Declarado anterior ($${fmt(turnoAnterior.efectivo_declarado || 0)}) vs Inicial ESTE turno ($${fmt(cierre.efectivo_inicial)}) = diferencia $${fmt(difBase)}\n`;
+      } else {
+        ctx += `  ✓ Declarado anterior coincide con inicial de este turno (dif: $${fmt(difBase)})\n`;
+      }
+    }
+
+    if (turnoSiguiente) {
+      ctx += `Turno SIGUIENTE: ${turnoSiguiente.responsable || '?'} abrió ${turnoSiguiente.fecha} ${turnoSiguiente.hora_inicio || ''}\n`;
+      ctx += `  → Efectivo inicial: $${fmt(turnoSiguiente.efectivo_inicial || 0)}`;
+      if (turnoSiguiente.apertura_valor) ctx += ` | Apertura recibida: $${fmt(turnoSiguiente.apertura_valor)}`;
+      ctx += `\n  → Resultado: ${turnoSiguiente.sobrante_faltante_tipo} $${fmt(Math.abs(turnoSiguiente.sobrante_faltante_monto || 0))}\n`;
     }
   }
 

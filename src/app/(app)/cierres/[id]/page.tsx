@@ -8,6 +8,8 @@ export default function CierreDetallePage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const [cierre, setCierre] = useState<Cierre | null>(null);
   const [loading, setLoading] = useState(true);
+  const [iaLoading, setIaLoading] = useState(false);
+  const [iaError, setIaError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -21,10 +23,41 @@ export default function CierreDetallePage({ params }: { params: Promise<{ id: st
     load();
   }, [id]);
 
+  async function triggerIA() {
+    if (!cierre) return;
+    setIaLoading(true);
+    setIaError(null);
+    try {
+      const res = await fetch('/api/ia/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cierre_id: cierre.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Recargar cierre con nuevos datos
+        const res2 = await fetch(`/api/cierres/${id}`);
+        if (res2.ok) {
+          const { data: updated } = await res2.json();
+          setCierre(updated);
+        }
+      } else {
+        setIaError(data.error || 'Error en análisis');
+      }
+    } catch {
+      setIaError('Error de conexión');
+    } finally {
+      setIaLoading(false);
+    }
+  }
+
   if (loading) return <p className="text-muted text-center py-8">Cargando...</p>;
   if (!cierre) return <p className="text-muted text-center py-8">Cierre no encontrado</p>;
 
   const fmt = (n: number) => n.toLocaleString('es-CO');
+  const estadoIA = cierre.estado_auditoria_ia;
+  const puedeAnalizarIA = ['IA_PENDIENTE', 'IA_ERROR', 'IA_COMPLETADO'].includes(estadoIA);
+  const esperandoSobre = estadoIA === 'ESPERANDO_SOBRE';
 
   return (
     <div className="space-y-4">
@@ -138,9 +171,46 @@ export default function CierreDetallePage({ params }: { params: Promise<{ id: st
 
       {/* Auditoría IA */}
       <Section title="Auditoría IA">
-        <Row label="Estado" value={cierre.estado_auditoria_ia.replace(/_/g, ' ')} />
-        <Row label="Resultado" value={cierre.resultado_auditoria_ia || '-'} />
-        <Row label="Acción" value={cierre.accion_recomendada || '-'} />
+        <Row label="Estado" value={estadoIA.replace(/_/g, ' ')} />
+
+        {/* Botón para disparar IA */}
+        {esperandoSobre && (
+          <div className="mt-2 p-3 bg-warning-light rounded-lg">
+            <p className="text-sm text-amber-800 font-medium">Primero cuenta el sobre para habilitar el análisis IA</p>
+            <Link href="/sobres" className="text-sm text-accent font-medium mt-1 inline-block">
+              Ir a contar sobre &rarr;
+            </Link>
+          </div>
+        )}
+
+        {puedeAnalizarIA && !iaLoading && (
+          <button
+            onClick={triggerIA}
+            className="mt-2 w-full py-2.5 bg-accent text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {estadoIA === 'IA_COMPLETADO' ? 'Re-analizar con IA' : 'Analizar con IA'}
+          </button>
+        )}
+
+        {iaLoading && (
+          <div className="mt-2 p-3 bg-accent-light rounded-lg text-center">
+            <p className="text-sm text-accent font-medium">Analizando con IA... puede tardar hasta 1 minuto</p>
+          </div>
+        )}
+
+        {iaError && (
+          <div className="mt-2 p-3 bg-danger-light rounded-lg">
+            <p className="text-sm text-danger">{iaError}</p>
+          </div>
+        )}
+
+        {cierre.resultado_auditoria_ia && (
+          <>
+            <Row label="Resultado" value={cierre.resultado_auditoria_ia} />
+            <Row label="Acción" value={cierre.accion_recomendada || '-'} />
+          </>
+        )}
+
         {cierre.explicacion_auditoria_ia && (
           <div className="mt-2 p-3 bg-gray-50 rounded-lg text-sm whitespace-pre-wrap">
             {cierre.explicacion_auditoria_ia}
