@@ -224,6 +224,11 @@ export interface IAAnalysisJSON {
     screenshot: string;
     verificado: boolean;
   }>;
+  verificacion_matematica?: {
+    formula_efectivo: string;
+    formula_declarado: string;
+    cadena_turnos: string;
+  };
   documentos_no_legibles: string[];
   anomalias: string[];
   accion: string;
