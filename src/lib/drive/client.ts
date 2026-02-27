@@ -12,16 +12,17 @@ let driveClient: drive_v3.Drive | null = null;
  * Parsea la service account key desde base64, sanitizando control characters.
  */
 export function parseServiceAccountKey(base64: string): Record<string, unknown> {
-  let decoded = Buffer.from(base64.replace(/\s/g, ''), 'base64').toString('utf-8');
-  // Reemplazar control characters literales (newlines, tabs) dentro de strings JSON
-  // que rompen JSON.parse. Esto ocurre con el campo private_key.
-  decoded = decoded.replace(/[\x00-\x1f]/g, (ch) => {
-    if (ch === '\n') return '\\n';
-    if (ch === '\r') return '\\r';
-    if (ch === '\t') return '\\t';
-    return '';
-  });
-  return JSON.parse(decoded);
+  const decoded = Buffer.from(base64.replace(/\s/g, ''), 'base64').toString('utf-8');
+  try {
+    return JSON.parse(decoded);
+  } catch {
+    // Si falla, hay newlines literales dentro de string values (ej: private_key).
+    // Reemplazar newlines SOLO dentro de strings (contenido entre comillas).
+    const fixed = decoded.replace(/"([^"]*)"/g, (match) => {
+      return match.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
+    });
+    return JSON.parse(fixed);
+  }
 }
 
 function getDriveClient(): drive_v3.Drive {
